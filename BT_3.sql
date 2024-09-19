@@ -1,0 +1,281 @@
+--CAU48
+CREATE TRIGGER TRG_CHECK_VITRI_CAUTHU
+ON CAUTHU
+AFTER INSERT
+AS
+BEGIN
+    DECLARE @Vitri NVARCHAR(20);
+    SELECT @Vitri = VITRI FROM INSERTED;
+    
+    IF @Vitri NOT IN (N'Thủ Môn', N'Tiền Đạo', N'Tiền Vệ', N'Trung Vệ', N'Hậu Vệ')
+    BEGIN
+        RAISERROR(N'Vị trí của cầu thủ không hợp lệ!', 16, 1);
+        ROLLBACK;
+    END
+END;
+GO
+
+DROP TRIGGER TRG_CHECK_VITRI_CAUTHU
+
+--CAU49
+CREATE TRIGGER TRG_CHECK_AO_CLB
+ON CAUTHU
+AFTER INSERT
+AS
+BEGIN
+    DECLARE @Maclb VARCHAR(5), @So INT;
+    SELECT @Maclb = MACLB, @So = SO FROM INSERTED;
+    
+    IF EXISTS (SELECT 1 FROM CAUTHU WHERE MACLB = @Maclb AND SO = @So)
+    BEGIN
+        RAISERROR(N'Số áo của cầu thủ trong cùng một câu lạc bộ phải khác nhau!', 16, 1);
+        ROLLBACK;
+    END
+END;
+GO
+
+DROP TRIGGER TRG_CHECK_AO_CLB
+
+--Cau50
+CREATE TRIGGER TRG_INSERT_CAUTHU_INFO
+ON CAUTHU
+AFTER INSERT
+AS
+BEGIN
+    PRINT N'Đã thêm cầu thủ mới';
+END;
+GO
+
+DROP TRIGGER TRG_INSERT_CAUTHU_INFO
+
+--CAU51
+CREATE TRIGGER TRG_TIM_CAUTHU_NGOAIQUOC
+ON CAUTHU
+AFTER INSERT
+AS
+BEGIN
+    DECLARE @Maclb VARCHAR(5), @ForeignPlayerCount INT;
+    SELECT @Maclb = MACLB FROM INSERTED;
+    
+    SELECT @ForeignPlayerCount = COUNT(*)
+    FROM CAUTHU c
+    INNER JOIN QUOCGIA q ON c.MAQG = q.MAQG
+    WHERE MACLB = @Maclb AND q.MAQG <> 'VN'; -- Non-Vietnamese players
+
+    IF @ForeignPlayerCount > 8
+    BEGIN
+        RAISERROR(N'Số lượng cầu thủ nước ngoài trong mỗi câu lạc bộ chỉ được phép tối đa là 8!', 16, 1);
+        ROLLBACK;
+    END
+END;
+GO
+DROP TRIGGER TRG_TIM_CAUTHU_NGOAIQUOC
+
+--CAU52
+CREATE TRIGGER TRG_TENQG_KO_BI_TRUNG
+ON QUOCGIA
+INSTEAD OF INSERT
+AS
+BEGIN
+    DECLARE @Tenqg NVARCHAR(60);
+    SELECT @Tenqg = TENQG FROM INSERTED;
+
+    IF EXISTS (SELECT 1 FROM QUOCGIA WHERE TENQG = @Tenqg)
+    BEGIN
+        RAISERROR(N'Tên quốc gia đã tồn tại!', 16, 1);
+    END
+    ELSE
+    BEGIN
+        INSERT INTO QUOCGIA(MAQG, TENQG)
+        SELECT MAQG, TENQG FROM INSERTED;
+    END
+END;
+GO
+
+DROP TRIGGER TRG_TENQG_KO_BI_TRUNG
+
+--CAU53
+CREATE TRIGGER TRG_TENTP_KO_TRUNG
+ON TINH
+INSTEAD OF INSERT
+AS
+BEGIN
+    DECLARE @Tentinh NVARCHAR(100);
+    SELECT @Tentinh = TENTINH FROM INSERTED;
+
+    IF EXISTS (SELECT 1 FROM TINH WHERE TENTINH = @Tentinh)
+    BEGIN
+        RAISERROR(N'Tên tỉnh thành đã tồn tại!', 16, 1);
+    END
+    ELSE
+    BEGIN
+        INSERT INTO TINH(MATINH, TENTINH)
+        SELECT MATINH, TENTINH FROM INSERTED;
+    END
+END;
+GO
+
+DROP TRIGGER TRG_TENQG_KO_BI_TRUNG
+
+--CAU54
+CREATE TRIGGER TRG_DONT_CHANGE_RESULT
+ON TRANDAU
+INSTEAD OF UPDATE
+AS
+BEGIN
+    DECLARE @OldDate DATETIME;
+    SELECT @OldDate = NGAYTD FROM DELETED;
+
+    IF @OldDate < GETDATE()
+    BEGIN
+        RAISERROR(N'Không thể sửa kết quả của các trận đã diễn ra!', 16, 1);
+        ROLLBACK;
+    END
+    ELSE
+    BEGIN
+        UPDATE TRANDAU
+        SET NAM = INSERTED.NAM,
+            VONG = INSERTED.VONG,
+            NGAYTD = INSERTED.NGAYTD,
+            MACLB1 = INSERTED.MACLB1,
+            MACLB2 = INSERTED.MACLB2,
+            MASAN = INSERTED.MASAN,
+            KETQUA = INSERTED.KETQUA
+        FROM INSERTED
+        WHERE TRANDAU.MATRAN = INSERTED.MATRAN;
+    END
+END;
+GO
+DROP TRIGGER TRG_DONT_CHANGE_RESULT
+
+--CAU55A
+CREATE TRIGGER TRG_CHECK_HLV_BI_TRUNG
+ON HLV_CLB
+AFTER INSERT
+AS
+BEGIN
+    DECLARE @Vaitro NVARCHAR(100);
+    SELECT @Vaitro = VAITRO FROM INSERTED;
+
+    IF @Vaitro NOT IN (N'HLV Chính', N'HLV Phụ', N'HLV Thể Lực', N'HLV Thủ Môn')
+    BEGIN
+        RAISERROR(N'Vai trò của huấn luyện viên không hợp lệ!', 16, 1);
+        ROLLBACK;
+    END
+END;
+GO
+
+DROP TRIGGER TRG_CHECK_HLV_BI_TRUNG
+
+--CAU55B
+CREATE TRIGGER TRG_CHECK_SL_HLV_TOI_DA
+ON HLV_CLB
+AFTER INSERT
+AS
+BEGIN
+    DECLARE @Maclb VARCHAR(5), @HeadCoachCount INT;
+    SELECT @Maclb = MACLB FROM INSERTED;
+    
+    SELECT @HeadCoachCount = COUNT(*)
+    FROM HLV_CLB
+    WHERE MACLB = @Maclb AND VAITRO = N'HLV Chính';
+
+    IF @HeadCoachCount > 2
+    BEGIN
+        RAISERROR(N'Mỗi câu lạc bộ chỉ có tối đa 2 HLV Chính!', 16, 1);
+        ROLLBACK;
+    END
+END;
+GO
+
+DROP TRIGGER TRG_CHECK_SL_HLV_TOI_DA
+
+--CAU56A
+CREATE TRIGGER TRG_CHECK_EXIT_CLB_CAN_INSERT
+ON CAULACBO
+AFTER INSERT
+AS
+BEGIN
+    DECLARE @Tenclb NVARCHAR(100);
+    SELECT @Tenclb = TENCLB FROM INSERTED;
+
+    IF EXISTS (SELECT 1 FROM CAULACBO WHERE TENCLB = @Tenclb)
+    BEGIN
+        PRINT N'Câu lạc bộ đã tồn tại nhưng vẫn được thêm.';
+    END
+END;
+GO
+
+INSERT INTO CAULACBO(MACLB, TENCLB, MASAN, MATINH)
+VALUES	
+	('ABD', N'BECAMEX BÌNH DƯƠNG', 'GD' , 'BD')
+
+DROP TRIGGER TRG_CHECK_EXIT_CLB_CAN_INSERT
+
+--CAU56B
+CREATE TRIGGER TRG_CHECK_EXITS_CLB
+ON CAULACBO
+INSTEAD OF INSERT
+AS
+BEGIN
+    DECLARE @Tenclb NVARCHAR(100);
+    SELECT @Tenclb = TENCLB FROM INSERTED;
+
+    IF EXISTS (SELECT 1 FROM CAULACBO WHERE TENCLB = @Tenclb)
+    BEGIN
+        RAISERROR(N'Câu lạc bộ đã tồn tại!', 16, 1);
+        ROLLBACK;
+    END
+    ELSE
+    BEGIN
+        INSERT INTO CAULACBO(MACLB, TENCLB, MASAN, MATINH)
+        SELECT MACLB, TENCLB, MASAN, MATINH FROM INSERTED;
+    END
+END;
+GO
+
+DROP TRIGGER TRG_CHECK_EXITS_CLB
+
+
+--CAU57
+CREATE TRIGGER TRG_CHANGE_CAUTHU_INFO
+ON dbo.CAUTHU 
+AFTER UPDATE
+AS
+BEGIN
+    PRINT N'a. Danh sách mã cầu thủ vừa được sửa:';
+    SELECT MACT FROM INSERTED;
+
+    PRINT N'b. Danh sách mã cầu thủ vừa được sửa và tên cầu thủ mới:';
+    SELECT MACT, NewName = TEN FROM INSERTED;
+
+    PRINT N'c. Danh sách mã cầu thủ vừa được sửa và tên cầu thủ cũ:';
+    SELECT MACT, OldName = TEN FROM DELETED;
+
+    PRINT N'd. Danh sách mã cầu thủ vừa được sửa, tên cầu thủ cũ và mới:';
+    SELECT D.MACT, OldName = D.TEN, NewName = I.TEN
+    FROM INSERTED I
+    JOIN DELETED D ON I.MACT = D.MACT;
+
+    PRINT N'e. Thông báo cho từng cầu thủ:';
+    DECLARE @MACT INT;
+    DECLARE @Message NVARCHAR(100);
+
+    DECLARE cur CURSOR FOR
+    SELECT MACT FROM INSERTED;
+
+    OPEN cur;
+    FETCH NEXT FROM cur INTO @MACT;
+
+    WHILE @@FETCH_STATUS = 0
+    BEGIN
+        SET @Message = N'Vừa sửa thông tin của cầu thủ có mã số ' + CAST(@MACT AS NVARCHAR(10));
+        PRINT @Message;
+        FETCH NEXT FROM cur INTO @MACT;
+    END;
+
+    CLOSE cur;
+    DEALLOCATE cur;
+END;
+
+DROP TRIGGER TRG_CHANGE_CAUTHU_INFO
