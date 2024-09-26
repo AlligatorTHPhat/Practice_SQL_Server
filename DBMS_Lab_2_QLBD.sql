@@ -1,4 +1,10 @@
 --RULE
+--23
+CREATE RULE R_VITRI
+
+AS @VITRI IN ('HLV chính', 'HLV phụ', 'HLV thể lực', 'HLV thủ môn')
+
+SP_BINDRULE 'R_VITRI', 'CAUTHU.VITRI'
 -- 23. Kiểm tra vị trí cầu thủ khi thêm cầu thủ mới
 CREATE FUNCTION CheckPlayerPosition(@position NVARCHAR(50))
 RETURNS BIT
