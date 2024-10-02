@@ -349,3 +349,223 @@ EXEC GetPlayerMatches @MaCT = 1;
 EXEC GetScorersByMatch @MaTD = 1;
 EXEC CountAllDrawMatches;
 
+--TRIGGER
+--48. Khi thêm cầu thủ mới, kiểm tra vị trí trên sân của cần thủ chỉ thuộc một trong các vị trí sau: Thủ môn, Tiền đạo, Tiền vệ, Trung vệ, Hậu vệ.
+CREATE TRIGGER trg_CheckPlayerPosition
+ON CAUTHU
+AFTER INSERT
+AS
+BEGIN
+    DECLARE @position NVARCHAR(20);
+    SELECT @position = VITRI FROM INSERTED;
+
+    IF @position NOT IN (N'Thủ môn', N'Tiền đạo', N'Tiền vệ', N'Trung vệ', N'Hậu vệ')
+    BEGIN
+        RAISERROR(N'Vị trí cầu thủ không hợp lệ. Vị trí phải là Thủ môn, Tiền đạo, Tiền vệ, Trung vệ, hoặc Hậu vệ.', 16, 1);
+        ROLLBACK TRANSACTION;
+    END
+END;
+
+--49. Khi thêm cầu thủ mới, kiểm tra số áo của cầu thủ thuộc cùng một câu lạc bộ phải khác nhau.
+CREATE TRIGGER trg_CheckPlayerNumber
+ON CAUTHU
+AFTER INSERT
+AS
+BEGIN
+    IF EXISTS (
+        SELECT * FROM CAUTHU c
+        JOIN INSERTED i ON c.MACLB = i.MACLB AND c.SO = i.SO
+    )
+    BEGIN
+        RAISERROR(N'Số áo của cầu thủ phải khác nhau trong cùng một câu lạc bộ.', 16, 1);
+        ROLLBACK TRANSACTION;
+    END
+END;
+
+--50. Khi thêm thông tin cầu thủ thì in ra câu thông báo bằng Tiếng Việt ‘Đã thêm cầu thủ mới’.
+CREATE TRIGGER trg_NotifyPlayerAdded
+ON CAUTHU
+AFTER INSERT
+AS
+BEGIN
+    PRINT N'Đã thêm cầu thủ mới';
+END;
+
+--51. Khi thêm cầu thủ mới, kiểm tra số lượng cầu thủ nước ngoài ở mỗi câu lạc bộ chỉ được phép đăng ký tối đa 8 cầu thủ
+CREATE TRIGGER trg_CheckForeignPlayers
+ON CAUTHU
+AFTER INSERT
+AS
+BEGIN
+    DECLARE @clubId VARCHAR(5);
+    SELECT @clubId = MACLB FROM INSERTED;
+
+    DECLARE @foreignPlayerCount INT;
+    SELECT @foreignPlayerCount = COUNT(*) FROM CAUTHU WHERE MACLB = @clubId AND MAQG <> 'VN';
+
+    IF @foreignPlayerCount >= 8
+    BEGIN
+        RAISERROR(N'Mỗi câu lạc bộ chỉ được phép đăng ký tối đa 8 cầu thủ nước ngoài.', 16, 1);
+        ROLLBACK TRANSACTION;
+    END
+END;
+
+--52. Khi thêm tên quốc gia, kiểm tra tên quốc gia không được trùng với tên quốc gia đã có.
+CREATE TRIGGER trg_CheckCountryName
+ON QUOCGIA
+AFTER INSERT
+AS
+BEGIN
+    IF EXISTS (
+        SELECT * FROM QUOCGIA q
+        JOIN INSERTED i ON q.TENQG = i.TENQG
+    )
+    BEGIN
+        RAISERROR(N'Tên quốc gia không được trùng với tên quốc gia đã có.', 16, 1);
+        ROLLBACK TRANSACTION;
+    END
+END;
+
+--53. Khi thêm tên tỉnh thành, kiểm tra tên tỉnh thành không được trùng với tên tỉnh thành đã có.
+CREATE TRIGGER trg_CheckProvinceName
+ON TINH
+AFTER INSERT
+AS
+BEGIN
+    IF EXISTS (
+        SELECT * FROM TINH t
+        JOIN INSERTED i ON t.TENTINH = i.TENTINH
+    )
+    BEGIN
+        RAISERROR(N'Tên tỉnh thành không được trùng với tên tỉnh thành đã có.', 16, 1);
+        ROLLBACK TRANSACTION;
+    END
+END;
+
+--54. Không cho sửa kết quả của các trận đã diễn ra.
+CREATE TRIGGER trg_PreventUpdateMatchResults
+ON TRANDAU
+INSTEAD OF UPDATE
+AS
+BEGIN
+    IF EXISTS (SELECT 1 FROM INSERTED i JOIN TRANDAU t ON i.MATRAN = t.MATRAN WHERE t.NGAYTD < GETDATE())
+    BEGIN
+        PRINT 'Cannot modify results of matches that have already occurred.';
+        RETURN;
+    END
+
+    UPDATE t
+    SET t.NAM = i.NAM,
+        t.VONG = i.VONG,
+        t.NGAYTD = i.NGAYTD,
+        t.MACLB1 = i.MACLB1,
+        t.MACLB2 = i.MACLB2,
+        t.MASAN = i.MASAN,
+        t.KETQUA = i.KETQUA
+    FROM TRANDAU t
+    JOIN INSERTED i ON t.MATRAN = i.MATRAN;
+END
+
+--55. Khi phân công huấn luyện viên cho câu lạc bộ:
+--a. Kiểm tra vai trò của huấn luyện viên chỉ thuộc một trong các vai trò sau: HLV chính, HLV phụ, HLV thể lực, HLV thủ môn.
+--b. Kiểm tra mỗi câu lạc bộ chỉ có tối đa 2 HLV chính.
+CREATE PROCEDURE AssignCoachToClub
+    @MAHLV VARCHAR(5),
+    @MACLB VARCHAR(5),
+    @VAITRO NVARCHAR(100)
+AS
+BEGIN
+    IF @VAITRO NOT IN (N'HLV Chính', N'HLV Phụ', N'HLV Thể Lực', N'HLV Thủ Môn')
+    BEGIN
+        PRINT 'Invalid coach role.';
+        RETURN;
+    END
+
+    IF @VAITRO = N'HLV Chính' AND (SELECT COUNT(*) FROM HLV_CLB WHERE MACLB = @MACLB AND VAITRO = N'HLV Chính') >= 2
+    BEGIN
+        PRINT 'This club already has 2 main coaches.';
+        RETURN;
+    END
+
+    INSERT INTO HLV_CLB (MAHLV, MACLB, VAITRO)
+    VALUES (@MAHLV, @MACLB, @VAITRO);
+END
+
+
+--56. Khi thêm mới một câu lạc bộ thì kiểm tra xem đã có câu lạc bộ trùng tên với câu lạc bộ vừa được thêm hay không?
+--a. chỉ thông báo vẫn cho insert.
+--b. thông báo và không cho insert.
+CREATE TRIGGER trg_CheckDuplicateClubName
+ON CAULACBO
+AFTER INSERT
+AS
+BEGIN
+    DECLARE @ClubName NVARCHAR(100);
+    SELECT @ClubName = TENCLB FROM INSERTED;
+
+    IF EXISTS (SELECT 1 FROM CAULACBO WHERE TENCLB = @ClubName AND MACLB <> (SELECT MACLB FROM INSERTED))
+    BEGIN
+        PRINT 'A club with this name already exists. Insertion allowed.';
+    END
+END
+
+CREATE TRIGGER trg_PreventDuplicateClubName
+ON CAULACBO
+INSTEAD OF INSERT
+AS
+BEGIN
+    DECLARE @ClubName NVARCHAR(100);
+    SELECT @ClubName = TENCLB FROM INSERTED;
+
+    IF EXISTS (SELECT 1 FROM CAULACBO WHERE TENCLB = @ClubName)
+    BEGIN
+        PRINT 'A club with this name already exists. Insertion not allowed.';
+        RETURN;
+    END
+
+    INSERT INTO CAULACBO (MACLB, TENCLB, MASAN, MATINH)
+    SELECT MACLB, TENCLB, MASAN, MATINH FROM INSERTED;
+END
+    
+--57. Khi sửa tên cầu thủ cho một (hoặc nhiều) cầu thủ thì in ra:
+--a. danh sách mã cầu thủ của các cầu thủ vừa được sửa.
+--b. danh sách mã cầu thủ vừa được sửa và tên cầu thủ mới.
+--c. danh sách mã cầu thủ vừa được sửa và tên cầu thủ cũ.
+--d. danh sách mã cầu thủ vừa được sửa và tên cầu thủ cũ và cầu thủ mới.
+--e. câu thông báo bằng Tiếng Việt: ‘Vừa sửa thông tin của cầu thủ có mã số xxx’ với xxx là mã cầu thủ vừa được sửa.
+-- Tạo thủ tục để sửa tên cầu thủ
+CREATE PROCEDURE SUA_TEN_CAUTHU 
+    @MACT NUMERIC,
+    @TEN_MOI NVARCHAR(100)
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    -- Lưu tên cũ vào biến
+    DECLARE @TEN_CU NVARCHAR(100);
+
+    -- Lấy tên cũ của cầu thủ
+    SELECT @TEN_CU = HOTEN FROM CAUTHU WHERE MACT = @MACT;
+
+    -- Cập nhật tên cầu thủ
+    UPDATE CAUTHU
+    SET HOTEN = @TEN_MOI
+    WHERE MACT = @MACT;
+
+    -- a. In ra danh sách mã cầu thủ vừa sửa
+    PRINT 'Mã cầu thủ vừa được sửa: ' + CAST(@MACT AS NVARCHAR(10));
+
+    -- b. In ra mã cầu thủ và tên mới
+    PRINT 'Mã cầu thủ: ' + CAST(@MACT AS NVARCHAR(10)) + ', Tên cầu thủ mới: ' + @TEN_MOI;
+
+    -- c. In ra mã cầu thủ và tên cũ
+    PRINT 'Mã cầu thủ: ' + CAST(@MACT AS NVARCHAR(10)) + ', Tên cầu thủ cũ: ' + @TEN_CU;
+
+    -- d. In ra mã cầu thủ, tên cũ và tên mới
+    PRINT 'Mã cầu thủ: ' + CAST(@MACT AS NVARCHAR(10)) + ', Tên cầu thủ cũ: ' + @TEN_CU + ', Tên cầu thủ mới: ' + @TEN_MOI;
+
+    -- e. In ra câu thông báo
+    PRINT 'Vừa sửa thông tin của cầu thủ có mã số: ' + CAST(@MACT AS NVARCHAR(10));
+END;
+GO
+
