@@ -1,0 +1,102 @@
+--58
+DECLARE player_cursor CURSOR FOR
+SELECT MACT, HOTEN, VITRI 
+FROM CAUTHU;
+
+OPEN player_cursor;
+
+DECLARE @MACT NUMERIC, @HOTEN NVARCHAR(100), @VITRI NVARCHAR(20);
+
+FETCH NEXT FROM player_cursor INTO @MACT, @HOTEN, @VITRI;
+
+WHILE @@FETCH_STATUS = 0
+BEGIN
+    PRINT 'Player ID: ' + CAST(@MACT AS NVARCHAR) + ', Name: ' + @HOTEN + ', Position: ' + @VITRI;
+    FETCH NEXT FROM player_cursor INTO @MACT, @HOTEN, @VITRI;
+END;
+
+CLOSE player_cursor;
+DEALLOCATE player_cursor;
+--59
+DECLARE club_cursor CURSOR FOR
+SELECT MACLB, TENCLB, TENSAN 
+FROM CAULACBO CLB
+JOIN SANVD SAN ON CLB.MASAN = SAN.MASAN;
+
+OPEN club_cursor;
+
+DECLARE @MACLB VARCHAR(5), @TENCLB NVARCHAR(100), @TENSAN NVARCHAR(100);
+
+FETCH NEXT FROM club_cursor INTO @MACLB, @TENCLB, @TENSAN;
+
+WHILE @@FETCH_STATUS = 0
+BEGIN
+    PRINT 'Club ID: ' + @MACLB + ', Club Name: ' + @TENCLB + ', Stadium: ' + @TENSAN;
+    FETCH NEXT FROM club_cursor INTO @MACLB, @TENCLB, @TENSAN;
+END;
+
+CLOSE club_cursor;
+DEALLOCATE club_cursor;
+--60
+DECLARE foreign_player_cursor CURSOR FOR
+SELECT MACLB, COUNT(MACT) AS ForeignPlayerCount
+FROM CAUTHU
+WHERE MAQG != 'VN'
+GROUP BY MACLB;
+
+OPEN foreign_player_cursor;
+
+DECLARE @MACLB VARCHAR(5), @ForeignPlayerCount INT;
+
+FETCH NEXT FROM foreign_player_cursor INTO @MACLB, @ForeignPlayerCount;
+
+WHILE @@FETCH_STATUS = 0
+BEGIN
+    PRINT 'Club ID: ' + @MACLB + ', Foreign Players: ' + CAST(@ForeignPlayerCount AS NVARCHAR);
+    FETCH NEXT FROM foreign_player_cursor INTO @MACLB, @ForeignPlayerCount;
+END;
+
+CLOSE foreign_player_cursor;
+DEALLOCATE foreign_player_cursor;
+--61
+DECLARE coach_cursor CURSOR FOR
+SELECT CLB.MACLB, COUNT(HLV.MAHLV) AS ForeignCoachCount
+FROM CAULACBO CLB
+LEFT JOIN HLV_CLB HLV_CLB ON CLB.MACLB = HLV_CLB.MACLB
+LEFT JOIN HUANLUYENVIEN HLV ON HLV_CLB.MAHLV = HLV.MAHLV
+WHERE HLV.MAQG != 'VN'
+GROUP BY CLB.MACLB;
+
+OPEN coach_cursor;
+
+DECLARE @MACLB VARCHAR(5), @ForeignCoachCount INT;
+
+FETCH NEXT FROM coach_cursor INTO @MACLB, @ForeignCoachCount;
+
+WHILE @@FETCH_STATUS = 0
+BEGIN
+    IF @ForeignCoachCount > 0
+        PRINT 'Club ID: ' + @MACLB + ', Foreign Coaches: ' + CAST(@ForeignCoachCount AS NVARCHAR);
+    ELSE
+        PRINT 'Club ID: ' + @MACLB + ', Foreign Coaches: Không có';
+    FETCH NEXT FROM coach_cursor INTO @MACLB, @ForeignCoachCount;
+END;
+
+CLOSE coach_cursor;
+DEALLOCATE coach_cursor;
+--62b
+CREATE VIEW HomePoints AS
+SELECT MACLB1 AS MACLB, NAM, VONG, 
+    SUM(CASE WHEN KETQUA LIKE '%-%' AND SUBSTRING(KETQUA, 1, 1) > SUBSTRING(KETQUA, 3, 1) THEN 3 
+             WHEN SUBSTRING(KETQUA, 1, 1) = SUBSTRING(KETQUA, 3, 1) THEN 1 
+             ELSE 0 END) AS Points
+FROM TRANDAU
+GROUP BY MACLB1, NAM, VONG;
+
+CREATE VIEW AwayPoints AS
+SELECT MACLB2 AS MACLB, NAM, VONG, 
+    SUM(CASE WHEN KETQUA LIKE '%-%' AND SUBSTRING(KETQUA, 1, 1) < SUBSTRING(KETQUA, 3, 1) THEN 3 
+             WHEN SUBSTRING(KETQUA, 1, 1) = SUBSTRING(KETQUA, 3, 1) THEN 1 
+             ELSE 0 END) AS Points
+FROM TRANDAU
+GROUP BY MACLB2, NAM, VONG;
