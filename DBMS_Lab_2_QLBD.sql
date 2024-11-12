@@ -195,19 +195,24 @@ BEGIN
 END
 
 -- 49. Trigger kiểm tra số áo cầu thủ
-CREATE TRIGGER trg_CheckUniqueJerseyNumber
-ON CauThu
+CREATE TRIGGER TRG_KTRA_SOAO_CAUTHU
+
+ON CAUTHU
 AFTER INSERT
+
 AS
+
 BEGIN
-    DECLARE @jerseyNumber INT;
-    SELECT @jerseyNumber = SoAo FROM inserted;
-    IF EXISTS (SELECT * FROM CauThu WHERE SoAo = @jerseyNumber AND CLB = (SELECT CLB FROM inserted))
-    BEGIN
-        RAISERROR('Số áo cầu thủ đã tồn tại!', 16, 1);
-        ROLLBACK TRANSACTION;
-    END
+	DECLARE @SOAO INT;
+	SELECT @SOAO = SO FROM INSERTED;
+
+	IF EXISTS(SELECT * FROM CAUTHU WHERE SO = @SOAO AND MACLB = (SELECT MACLB FROM INSERTED))
+	BEGIN
+		RAISERROR('Số áo cầu thủ đã tồn tại!', 16, 1);
+		ROLLBACK TRANSACTION;
+	END
 END
+
 
 -- 50. Trigger thông báo khi thêm cầu thủ mới
 CREATE TRIGGER trg_NotifyNewPlayer
