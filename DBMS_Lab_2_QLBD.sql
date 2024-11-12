@@ -177,18 +177,21 @@ END
 
 --TRIGGER
 -- 48. Trigger kiểm tra vị trí cầu thủ khi thêm cầu thủ mới
-CREATE TRIGGER trg_CheckPlayerPosition
-ON CauThu
+CREATE TRIGGER TRG_KTRA_VITRI_CAUTHU
+
+ON CAUTHU
 AFTER INSERT
-AS
+AS 
 BEGIN
-    DECLARE @position NVARCHAR(50);
-    SELECT @position = ViTri FROM inserted;
-    IF NOT EXISTS (SELECT * FROM (VALUES ('Thủ môn'), ('Tiền đạo'), ('Tiền vệ'), ('Trung vệ'), ('Hậu vệ')) AS Positions(Pos) WHERE Pos = @position)
-    BEGIN
-        RAISERROR('Vị trí cầu thủ không hợp lệ!', 16, 1);
-        ROLLBACK TRANSACTION;
-    END
+	DECLARE @vitri NVARCHAR(20);
+	SELECT @vitri = VITRI FROM INSERTED;
+	IF NOT EXISTS (SELECT * FROM (VALUES 
+		(N'Thủ Môn'), (N'Tiền Đạo'), (N'Tiền Vệ'), (N'Trung Vệ'), (N'Hậu vệ')) 
+			AS POSITIONS(Pos) WHERE Pos = @vitri)
+	BEGIN 
+		RAISERROR (N'Vị trí cầu thủ không hợp lệ!', 16, 1);
+		ROLLBACK TRANSACTION;
+	END
 END
 
 -- 49. Trigger kiểm tra số áo cầu thủ
