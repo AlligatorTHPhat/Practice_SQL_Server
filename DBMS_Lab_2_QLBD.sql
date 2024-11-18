@@ -95,10 +95,12 @@ WHERE SoDienThoai IS NULL;
 
 --STORE PROCEDURE
 -- 35. In ra dòng ‘Xin chào’ + @ten
-CREATE PROCEDURE GreetUser(@ten NVARCHAR(50))
+CREATE PROCEDURE
+	GREETUSER(@NAME NVARCHAR(50))
 AS
+
 BEGIN
-    PRINT 'Xin chào ' + @ten;
+	PRINT(N'XIN CHAO ') + @NAME
 END
 
 -- 36. Nhập vào 2 số @s1, @s2. In ra tổng
