@@ -104,77 +104,407 @@ BEGIN
 END
 
 -- 36. Nhập vào 2 số @s1, @s2. In ra tổng
-CREATE PROCEDURE SumTwoNumbers(@s1 INT, @s2 INT)
-AS
-BEGIN
-    DECLARE @tg INT;
-    SET @tg = @s1 + @s2;
-    PRINT 'Tổng là: ' + CAST(@tg AS NVARCHAR);
-END
+CREATE PROCEDURE 
+	SUM1(@S1 INT, @S2 INT) 
+AS 
+
+BEGIN 
+	DECLARE @TG INT; 
+	SET @TG = @S1 + @S2; 
+
+	PRINT N'Tổng là: ' + CAST(@TG AS NVARCHAR);
+END; 
+	
+EXEC SUM1 @S1 = 5, @S2 = 7;	
 
 -- 37. Nhập vào 2 số @s1, @s2. Xuất tổng ra tham số @tong
-CREATE PROCEDURE OutputSum(@s1 INT, @s2 INT, @tong INT OUTPUT)
-AS
-BEGIN
-    SET @tong = @s1 + @s2;
-END
+CREATE PROCEDURE 
+	SUM2(@S1 INT, @S2 INT) 
+AS 
+
+BEGIN 
+	DECLARE @TONG INT; 
+	SET @TONG = @S1 + @S2; 
+
+	PRINT CAST(@TONG AS NVARCHAR);
+END; 
+	
+EXEC SUM2 @S1 = 5, @S2 = 7;	
 
 -- 38. Nhập vào 2 số @s1, @s2. In ra số lớn nhất
-CREATE PROCEDURE MaxOfTwo(@s1 INT, @s2 INT)
+CREATE PROCEDURE 
+	COMPARE1(@S1 INT, @S2 INT)
 AS
+
 BEGIN
-    DECLARE @max INT;
-    SET @max = CASE WHEN @s1 > @s2 THEN @s1 ELSE @s2 END;
-    PRINT 'Số lớn nhất của ' + CAST(@s1 AS NVARCHAR) + ' và ' + CAST(@s2 AS NVARCHAR) + ' là ' + CAST(@max AS NVARCHAR);
+	DECLARE @MAX INT;
+
+	SET @MAX = CASE WHEN @S1 > @S2 THEN @S1 ELSE @S2 END;
+
+	PRINT N'Số lớn nhất của ' + CAST(@S1 AS NVARCHAR) 
+		+ N' và ' + CAST(@S2 AS NVARCHAR) + 
+		N' là '+ CAST(@MAX AS NVARCHAR)
 END
 
+EXEC COMPARE1 @S1 = 5, @S2 =7;
+		
 -- 39. Nhập vào 2 số @s1, @s2. Xuất min và max
-CREATE PROCEDURE MinMaxOfTwo(@s1 INT, @s2 INT, @min INT OUTPUT, @max INT OUTPUT)
+CREATE PROCEDURE 
+	COMPARE2(@S1 INT, @S2 INT)
 AS
+
 BEGIN
-    SET @min = CASE WHEN @s1 < @s2 THEN @s1 ELSE @s2 END;
-    SET @max = CASE WHEN @s1 > @s2 THEN @s1 ELSE @s2 END;
+	DECLARE @MAX INT;
+	DECLARE @MIN INT;
+
+	SET @MAX = CASE WHEN @S1 > @S2 THEN @S1 ELSE @S2 END;
+
+	PRINT N'Số lớn nhất của ' + CAST(@S1 AS NVARCHAR) 
+		+ N' và ' + CAST(@S2 AS NVARCHAR) + 
+		N' là '+ CAST(@MAX AS NVARCHAR)
+
+	SET @MIN = CASE WHEN @S1 < @S2 THEN @S1 ELSE @S2 END;
+
+	PRINT N'Số nhỏ nhất của ' + CAST(@S1 AS NVARCHAR) 
+		+ N' và ' + CAST(@S2 AS NVARCHAR) + 
+		N' là '+ CAST(@MIN AS NVARCHAR)
 END
 
+EXEC COMPARE2 @S1 = 5, @S2 = 7;
 -- 40. Nhập vào số nguyên @n. In ra các số từ 1 đến @n.
-CREATE PROCEDURE PrintNumbers(@n INT)
+CREATE PROCEDURE 
+	FOR1(@S1 INT)
 AS
+
 BEGIN
-    DECLARE @i INT = 1;
-    WHILE @i <= @n
-    BEGIN
-        PRINT @i;
-        SET @i = @i + 1;
-    END
+	DECLARE @I INT = 1;
+
+	WHILE (@I <= @S1)
+		BEGIN
+			PRINT  @I;
+			SET @I = @I + 1;
+		END
 END
+			
+EXEC FOR1 @S1 = 5;
 
 -- 41. Nhập vào số nguyên @n. In ra tổng và số lượng các số chẵn từ 1 đến @n
-CREATE PROCEDURE CountEvenNumbers(@n INT, @tong INT OUTPUT, @count INT OUTPUT)
+CREATE PROCEDURE 
+	FOR2(@S1 INT)
 AS
+
 BEGIN
-    DECLARE @i INT = 1;
-    SET @tong = 0;
-    SET @count = 0;
-    
-    WHILE @i <= @n
-    BEGIN
-        IF @i % 2 = 0
-        BEGIN
-            SET @tong = @tong + @i;
-            SET @count = @count + 1;
-        END
-        SET @i = @i + 1;
-    END
+	DECLARE @I INT = 1;
+
+	WHILE (@I <= @S1)
+		BEGIN
+			IF (@I % 2 = 0)
+			BEGIN
+				PRINT  @I;
+			END
+			SET @I = @I + 1;
+		END
 END
+			
+EXEC FOR2 @S1 = 8;
 
 -- 42. Bao nhiêu trận đấu hòa nhau ở vòng 3 năm 2009
-CREATE PROCEDURE CountDrawMatches
+USE QUAN_LY_GIAI_BONG_DA_V_LEAGUE
+GO
+
+CREATE PROCEDURE 
+	DRAWMATCH
+AS
+
+BEGIN
+	SELECT CAST(COUNT(*) AS NVARCHAR) AS SOTRANHOA
+	FROM TRANDAU 
+	WHERE KETQUA = N'Hòa' AND VONG = 3 AND NAM = 2009;
+
+END
+
+USE QUAN_LY_GIAI_BONG_DA_V_LEAGUE
+GO
+
+EXEC DRAWMATCH;
+
+--43. Viết store procedure tương ứng với các câu ở phần View. Sau đó cho thực hiện để kiểm tra kết quả.
+CREATE PROCEDURE GETINFOCOUNTRY
+    @QG NVARCHAR(5)
 AS
 BEGIN
-    SELECT COUNT(*) AS SoTranHoa
+    SELECT 
+        CAUTHU.HOTEN,
+        CAUTHU.VITRI,
+        CAUTHU.NGAYSINH,
+        CAULACBO.TENCLB,
+        QUOCGIA.TENQG
+    FROM CAUTHU
+    INNER JOIN CAULACBO ON CAUTHU.MACLB = CAULACBO.MACLB
+    INNER JOIN QUOCGIA ON CAUTHU.MAQG = QUOCGIA.MAQG
+    WHERE CAUTHU.MAQG = @QG;
+END;
+
+CREATE PROCEDURE GETRAKING
+    @YEAR INT,
+    @ROUND INT
+AS
+BEGIN
+    SELECT 
+        BANGXH.MACLB,
+        CAULACBO.TENCLB,
+        BANGXH.SOTRAN,
+        BANGXH.THANG,
+        BANGXH.HOA,
+        BANGXH.THUA,
+        BANGXH.DIEM,
+        BANGXH.HANG
+    FROM BANGXH
+    INNER JOIN CAULACBO ON BANGXH.MACLB = CAULACBO.MACLB
+    WHERE BANGXH.NAM = @YEAR AND BANGXH.VONG = @ROUND
+    ORDER BY BANGXH.HANG ASC;
+END;
+
+CREATE PROCEDURE ADDPLAYER
+    @NAME NVARCHAR(100),
+    @POSITION NVARCHAR(20),
+    @BIRTHDATE DATETIME,
+    @ADDRESS NVARCHAR(200),
+    @CLUBID NVARCHAR(5),
+    @COUNTRYID NVARCHAR(5),
+    @NUMBER INT
+AS
+BEGIN
+    INSERT INTO CAUTHU (HOTEN, VITRI, NGAYSINH, DIACHI, MACLB, MAQG, SO)
+    VALUES (@NAME, @POSITION, @BIRTHDATE, 
+		@ADDRESS, @CLUBID, @COUNTRYID, @NUMBER);
+
+    SELECT SCOPE_IDENTITY() AS NEWPLAYERID;
+END;
+
+CREATE PROCEDURE UPDATEMENTOR
+    @MENTORID NVARCHAR(5),
+    @MENTORNAME NVARCHAR(100),
+    @BIRTHDATE DATETIME,
+    @ADDRESS NVARCHAR(100),
+    @PHONENUMBER NVARCHAR(20),
+    @COUNTRYID NVARCHAR(5)
+AS
+BEGIN
+    UPDATE HUANLUYENVIEN
+    SET 
+        TENHLV = @MENTORNAME,
+        NGAYSINH = @BIRTHDATE,
+        DIACHI = @ADDRESS,
+        DIENTHOAI = @PHONENUMBER,
+        MAQG = @COUNTRYID
+    WHERE MAHLV = @MENTORID;
+    
+    SELECT * FROM HUANLUYENVIEN WHERE MAHLV = @MENTORID;
+END;
+
+CREATE PROCEDURE ADDMATCH
+    @YEAR INT,
+    @ROUND INT,
+    @DATE DATETIME,
+    @CLUB1ID NVARCHAR(5),
+    @CLUB2ID NVARCHAR(5),
+    @GROUNDID NVARCHAR(5),
+    @RESULT NVARCHAR(5)
+AS
+BEGIN
+    INSERT INTO TRANDAU (NAM, VONG, NGAYTD, MACLB1, MACLB2, MASAN, KETQUA)
+    VALUES (@YEAR, @ROUND, @DATE, @CLUB1ID, @CLUB2ID, @GROUNDID, @RESULT);
+    
+    SELECT SCOPE_IDENTITY() AS NEWADDMATCH;
+END;
+
+--44. Viết các thủ tục để nhập số liệu cho CSDL trên (các số liệu được thêm vào thông qua tham số thủ tục).
+-- Thủ tục thêm quốc gia
+CREATE PROCEDURE SP_THEM_QUOCGIA
+    @MAQG VARCHAR(5),
+    @TENQG NVARCHAR(60)
+AS
+BEGIN
+    INSERT INTO QUOCGIA(MAQG, TENQG)
+    VALUES (@MAQG, @TENQG);
+END;
+GO
+
+-- Thủ tục thêm tỉnh
+CREATE PROCEDURE SP_THEM_TINH
+    @MATINH VARCHAR(5),
+    @TENTINH NVARCHAR(100)
+AS
+BEGIN
+    INSERT INTO TINH(MATINH, TENTINH)
+    VALUES (@MATINH, @TENTINH);
+END;
+GO
+
+-- Thủ tục thêm sân vận động
+CREATE PROCEDURE SP_THEM_SANVD
+    @MASAN VARCHAR(5),
+    @TENSAN NVARCHAR(100),
+    @DIACHI NVARCHAR(100)
+AS
+BEGIN
+    INSERT INTO SANVD(MASAN, TENSAN, DIACHI)
+    VALUES (@MASAN, @TENSAN, @DIACHI);
+END;
+GO
+
+-- Thủ tục thêm câu lạc bộ
+CREATE PROCEDURE SP_THEM_CAULACBO
+    @MACLB VARCHAR(5),
+    @TENCLB NVARCHAR(100),
+    @MASAN VARCHAR(5),
+    @MATINH VARCHAR(5)
+AS
+BEGIN
+    INSERT INTO CAULACBO(MACLB, TENCLB, MASAN, MATINH)
+    VALUES (@MACLB, @TENCLB, @MASAN, @MATINH);
+END;
+GO
+
+-- Thủ tục thêm cầu thủ
+CREATE PROCEDURE SP_THEM_CAUTHU
+    @HOTEN NVARCHAR(100),
+    @VITRI NVARCHAR(20),
+    @NGAYSINH DATETIME,
+    @DIACHI NVARCHAR(200),
+    @MACLB VARCHAR(5),
+    @MAQG VARCHAR(5),
+    @SO INT
+AS
+BEGIN
+    INSERT INTO CAUTHU(HOTEN, VITRI, NGAYSINH, DIACHI, MACLB, MAQG, SO)
+    VALUES (@HOTEN, @VITRI, @NGAYSINH, @DIACHI, @MACLB, @MAQG, @SO);
+END;
+GO
+
+-- Thủ tục thêm huấn luyện viên
+CREATE PROCEDURE SP_THEM_HUANLUYENVIEN
+    @MAHLV VARCHAR(5),
+    @TENHLV NVARCHAR(100),
+    @NGAYSINH DATETIME,
+    @DIACHI NVARCHAR(100),
+    @DIENTHOAI NVARCHAR(20),
+    @MAQG VARCHAR(5)
+AS
+BEGIN
+    INSERT INTO HUANLUYENVIEN(MAHLV, TENHLV, NGAYSINH, DIACHI, DIENTHOAI, MAQG)
+    VALUES (@MAHLV, @TENHLV, @NGAYSINH, @DIACHI, @DIENTHOAI, @MAQG);
+END;
+GO
+
+-- Thủ tục thêm trận đấu
+CREATE PROCEDURE SP_THEM_TRANDAU
+    @NAM INT,
+    @VONG INT,
+    @NGAYTD DATETIME,
+    @MACLB1 VARCHAR(5),
+    @MACLB2 VARCHAR(5),
+    @MASAN VARCHAR(5),
+    @KETQUA VARCHAR(5)
+AS
+BEGIN
+    INSERT INTO TRANDAU(NAM, VONG, NGAYTD, MACLB1, MACLB2, MASAN, KETQUA)
+    VALUES (@NAM, @VONG, @NGAYTD, @MACLB1, @MACLB2, @MASAN, @KETQUA);
+END;
+GO
+
+-- Thủ tục thêm tham gia
+CREATE PROCEDURE SP_THEM_THAMGIA
+    @MATD NUMERIC,
+    @MACT NUMERIC,
+    @SOTRAI INT
+AS
+BEGIN
+    INSERT INTO THAMGIA(MATD, MACT, SOTRAI)
+    VALUES (@MATD, @MACT, @SOTRAI);
+END;
+GO
+
+EXEC SP_THEM_QUOCGIA 'USA', N'Mỹ';
+EXEC SP_THEM_TINH 'HCM', N'Hồ Chí Minh';
+EXEC SP_THEM_SANVD 'SV01', N'Sân Mỹ Đình', N'Hà Nội';
+EXEC SP_THEM_CAULACBO 'CLB01', N'Hà Nội FC', 'SV01', 'HN';
+EXEC SP_THEM_CAUTHU N'Nguyễn Văn A', N'Tiền đạo', '1990-01-01', N'Hà Nội', 'CLB01', 'VN', 10;
+EXEC SP_THEM_HUANLUYENVIEN 'HLV01', N'Park Hang-seo', '1959-10-01', N'Hà Nội', '0912345678', 'HQ';
+EXEC SP_THEM_TRANDAU 2024, 1, '2024-01-01', 'CLB01', 'CLB02', 'SV01', '1-0';
+EXEC SP_THEM_THAMGIA 1, 1, 3;
+
+--45. Nhập vào mã cầu thủ (@MaCT), cho biết thông tin các trận đấu (MaTD, TenTD, NgayTD) mà cầu thủ này đã tham gia.
+CREATE PROCEDURE SP_LayThongTinTranDauCauThu
+    @MaCT NUMERIC -- Tham số đầu vào: Mã cầu thủ
+AS
+BEGIN
+    -- Bắt đầu một khối xử lý an toàn
+    BEGIN TRY
+        -- Lấy thông tin trận đấu
+        SELECT 
+            TD.MATRAN AS MaTD,
+            CONCAT('CLB ', CLB1.TENCLB, ' vs ', CLB2.TENCLB) AS TenTD,
+            TD.NGAYTD AS NgayTD
+        FROM 
+            THAMGIA TG
+        INNER JOIN TRANDAU TD ON TG.MATD = TD.MATRAN
+        INNER JOIN CAULACBO CLB1 ON TD.MACLB1 = CLB1.MACLB
+        INNER JOIN CAULACBO CLB2 ON TD.MACLB2 = CLB2.MACLB
+        WHERE 
+            TG.MACT = @MaCT;
+    END TRY
+    BEGIN CATCH
+        -- Xử lý lỗi (nếu có)
+        PRINT 'Đã xảy ra lỗi khi lấy thông tin.';
+    END CATCH
+END;
+GO
+
+EXEC SP_LayThongTinTranDauCauThu @MaCT = 1;
+
+--46. Nhập vào mã trận đấu (@MaCT), cho biết danh sách cầu thủ ghi bàn trong trận đấu này.
+CREATE PROCEDURE SP_LayDanhSachCauThuGhiBan
+    @MaCT NUMERIC
+AS
+BEGIN
+    -- Lấy danh sách cầu thủ ghi bàn trong trận đấu
+    SELECT 
+        CT.HOTEN AS TenCauThu,
+        CT.VITRI AS ViTri,
+        CT.MACLB AS MaCLB,
+        CLB.TENCLB AS TenCLB,
+        TG.SOTRAI AS SoBanThang
+    FROM 
+        THAMGIA TG
+    INNER JOIN 
+        CAUTHU CT ON TG.MACT = CT.MACT
+    INNER JOIN 
+        CAULACBO CLB ON CT.MACLB = CLB.MACLB
+    WHERE 
+        TG.MATD = @MaCT AND TG.SOTRAI > 0 -- Chỉ lấy các cầu thủ có số bàn thắng > 0
+    ORDER BY 
+        TG.SOTRAI DESC; -- Sắp xếp theo số bàn thắng giảm dần
+END;
+GO
+EXEC SP_LayDanhSachCauThuGhiBan @MaCT = 1;
+
+--47. Cho biết có tất cả bao nhiêu trận đấu hòa nhau.
+CREATE PROCEDURE SP_COUNT_DRAW_MATCHES
+AS
+BEGIN
+    -- Sử dụng hàm PATINDEX để kiểm tra kết quả có dạng 'x-x'
+    SELECT COUNT(*) AS TotalDrawMatches
     FROM TRANDAU
-    WHERE KETQUA = 'Hòa' AND Vong = 3 AND Nam = 2009;
-END
+    WHERE KETQUA LIKE '%-%'
+          AND LEFT(KETQUA, CHARINDEX('-', KETQUA) - 1) = 
+              RIGHT(KETQUA, LEN(KETQUA) - CHARINDEX('-', KETQUA));
+END;
+GO
+
+EXEC SP_COUNT_DRAW_MATCHES;
+
 
 
 --TRIGGER
