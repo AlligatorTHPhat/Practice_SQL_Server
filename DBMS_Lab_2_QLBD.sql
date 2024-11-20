@@ -352,20 +352,22 @@ END
 	
 --44. Viết các thủ tục để nhập số liệu cho CSDL trên (các số liệu được thêm vào thông qua tham số thủ tục).
 -- Thủ tục thêm quốc gia
-CREATE PROCEDURE SP_THEM_QUOCGIA
-    @MAQG VARCHAR(5),
-    @TENQG NVARCHAR(60)
-AS
-BEGIN
-    INSERT INTO QUOCGIA(MAQG, TENQG)
-    VALUES (@MAQG, @TENQG);
-END;
+USE QUAN_Ly_GIAI_BONG_DA_V_LEAGUE
 GO
 
+CREATE PROCEDURE BT3 (@MAQG NVARCHAR, @TENQG NVARCHAR) AS
+BEGIN
+	INSERT INTO QUOCGIA(MAQG, TENQG)
+	VALUES (@MAQG, @TENQG)
+END
+
+USE QUAN_LY_GIAI_BONG_DA_V_LEAGUE
+GO
+
+EXEC BT3 'VN', N'Việt Nam';
+
 -- Thủ tục thêm tỉnh
-CREATE PROCEDURE SP_THEM_TINH
-    @MATINH VARCHAR(5),
-    @TENTINH NVARCHAR(100)
+CREATE PROCEDURE BT30 (@MATINH VARCHAR, @TENTINH NVARCHAR)
 AS
 BEGIN
     INSERT INTO TINH(MATINH, TENTINH)
@@ -374,16 +376,16 @@ END;
 GO
 
 -- Thủ tục thêm sân vận động
-CREATE PROCEDURE SP_THEM_SANVD
-    @MASAN VARCHAR(5),
-    @TENSAN NVARCHAR(100),
-    @DIACHI NVARCHAR(100)
+CREATE PROCEDURE BT3A 
+	(@MASAN NVARCHAR, @TENSAN NVARCHAR, @DIACHI NVARCHAR)
 AS
 BEGIN
-    INSERT INTO SANVD(MASAN, TENSAN, DIACHI)
-    VALUES (@MASAN, @TENSAN, @DIACHI);
-END;
-GO
+	INSERT INTO SANVD(MASAN, TENSAN, DIACHI)
+	VALUES (@MASAN, @TENSAN, @DIACHI)
+END
+
+EXEC BT3A @MASAN = 'S001', @TENSAN = N'Sân Mỹ Đình', @DIACHI = N'Hà Nội';
+
 
 -- Thủ tục thêm câu lạc bộ
 CREATE PROCEDURE SP_THEM_CAULACBO
@@ -467,7 +469,7 @@ EXEC SP_THEM_TRANDAU 2024, 1, '2024-01-01', 'CLB01', 'CLB02', 'SV01', '1-0';
 EXEC SP_THEM_THAMGIA 1, 1, 3;
 
 --45. Nhập vào mã cầu thủ (@MaCT), cho biết thông tin các trận đấu (MaTD, TenTD, NgayTD) mà cầu thủ này đã tham gia.
-CREATE PROCEDURE SP_LayThongTinTranDauCauThu
+CREATE PROCEDURE BT4
     @MaCT NUMERIC -- Tham số đầu vào: Mã cầu thủ
 AS
 BEGIN
@@ -488,15 +490,15 @@ BEGIN
     END TRY
     BEGIN CATCH
         -- Xử lý lỗi (nếu có)
-        PRINT 'Đã xảy ra lỗi khi lấy thông tin.';
+        PRINT N'Đã xảy ra lỗi khi lấy thông tin.';
     END CATCH
 END;
 GO
 
-EXEC SP_LayThongTinTranDauCauThu @MaCT = 1;
+EXEC BT4  @MaCT = 1;
 
 --46. Nhập vào mã trận đấu (@MaCT), cho biết danh sách cầu thủ ghi bàn trong trận đấu này.
-CREATE PROCEDURE SP_LayDanhSachCauThuGhiBan
+CREATE PROCEDURE BT5
     @MaCT NUMERIC
 AS
 BEGIN
@@ -519,28 +521,35 @@ BEGIN
         TG.SOTRAI DESC; -- Sắp xếp theo số bàn thắng giảm dần
 END;
 GO
-EXEC SP_LayDanhSachCauThuGhiBan @MaCT = 1;
+EXEC BT5 @MaCT = 1;
 
 --47. Cho biết có tất cả bao nhiêu trận đấu hòa nhau.
-CREATE PROCEDURE SP_COUNT_DRAW_MATCHES
-AS
-BEGIN
-    -- Sử dụng hàm PATINDEX để kiểm tra kết quả có dạng 'x-x'
-    SELECT COUNT(*) AS TotalDrawMatches
-    FROM TRANDAU
-    WHERE KETQUA LIKE '%-%'
-          AND LEFT(KETQUA, CHARINDEX('-', KETQUA) - 1) = 
-              RIGHT(KETQUA, LEN(KETQUA) - CHARINDEX('-', KETQUA));
-END;
+USE QUAN_LY_GIAI_BONG_DA_V_LEAGUE
 GO
 
-EXEC SP_COUNT_DRAW_MATCHES;
+CREATE PROCEDURE BT6 AS
+BEGIN
+	BEGIN TRY
+		SELECT
+			CONCAT('SO TRAN HOA: ', COUNT(TD.KETQUA)) AS HOA
+		FROM
+			TRANDAU TD 
+		WHERE 
+			KETQUA LIKE '%-%'
+				AND LEFT (KETQUA, CHARINDEX('-', KETQUA) -1)
+					= RIGHT (KETQUA, LEN(KETQUA) - CHARINDEX('-', KETQUA));	
+	END TRY
+
+	BEGIN CATCH
+		PRINT('NOT FOUND!')
+	END CATCH
+END
 
 
 
 --TRIGGER
 -- 48. Trigger kiểm tra vị trí cầu thủ khi thêm cầu thủ mới
-CREATE TRIGGER TRG_KTRA_VITRI_CAUTHU
+CREATE TRIGGER TRG_BT1
 
 ON CAUTHU
 AFTER INSERT
@@ -557,128 +566,181 @@ BEGIN
 	END
 END
 
--- 49. Trigger kiểm tra số áo cầu thủ
-CREATE TRIGGER TRG_KTRA_SOAO_CAUTHU
+CREATE TRIGGER TRG_BT1 --<CÁCH 2>
 
 ON CAUTHU
 AFTER INSERT
-
-AS
-
+AS 
 BEGIN
-	DECLARE @SOAO INT;
-	SELECT @SOAO = SO FROM INSERTED;
+	DECLARE @VITRI NVARCHAR;
+	SELECT @VITRI = VITRI FROM INSERTED;
 
-	IF EXISTS(SELECT * FROM CAUTHU WHERE SO = @SOAO AND MACLB = (SELECT MACLB FROM INSERTED))
-	BEGIN
-		RAISERROR('Số áo cầu thủ đã tồn tại!', 16, 1);
+	IF @VITRI NOT IN ( 
+		(N'Thủ Môn'), (N'Tiền Đạo'), (N'Tiền Vệ'), (N'Trung Vệ'), (N'Hậu vệ')) 
+	BEGIN 
+		RAISERROR (N'Vị trí cầu thủ không hợp lệ!', 16, 1);
 		ROLLBACK TRANSACTION;
 	END
 END
 
+-- 49. Trigger kiểm tra số áo cầu thủ
+CREATE TRIGGER TRG_BT2
+
+ON CAUTHU
+
+AFTER INSERT
+
+AS
+
+BEGIN
+	DECLARE @SOAO INT, @MACLB NVARCHAR;
+	SELECT @SOAO = SO FROM INSERTED; 
+	SELECT @MACLB = MACLB FROM INSERTED;
+
+	IF EXISTS (SELECT * FROM CAUTHU WHERE 
+		@SOAO = SO AND @MACLB = MACLB)
+	BEGIN
+		RAISERROR ('INVALID!',16,1);
+		ROLLBACK TRANSACTION;
+	END
+END
 
 -- 50. Trigger thông báo khi thêm cầu thủ mới
-CREATE TRIGGER trg_NotifyNewPlayer
-ON CauThu
+CREATE TRIGGER TRG_BT3
+
+ON CAUTHU
+
 AFTER INSERT
+
 AS
+
 BEGIN
-    PRINT 'Đã thêm cầu thủ mới';
+	PRINT N'Đã thêm cầu thủ mới!';
 END
 
 -- 51. Trigger kiểm tra số lượng cầu thủ nước ngoài
-CREATE TRIGGER trg_CheckForeignPlayers
-ON CauThu
-AFTER INSERT
-AS
-BEGIN
-    DECLARE @club NVARCHAR(50);
-    SELECT @club = CLB FROM inserted;
-    DECLARE @foreignCount INT;
-    SELECT @foreignCount = COUNT(*) FROM CauThu WHERE QuocTich <> 'Việt Nam' AND CLB = @club;
+CREATE TRIGGER TRG_BT4
 
-    IF @foreignCount > 8
-    BEGIN
-        RAISERROR('Số lượng cầu thủ nước ngoài tối đa là 8!', 16, 1);
-        ROLLBACK TRANSACTION;
-    END
+ON CAUTHU
+
+AFTER INSERT
+
+AS
+
+BEGIN
+	DECLARE @MACLB NVARCHAR, @MAQG NVARCHAR;
+	SELECT @MACLB = MACLB FROM INSERTED;
+	SELECT @MAQG = COUNT(*) FROM CAUTHU 
+		WHERE @MACLB = MACLB;
+
+	IF (@MAQG > 8)
+		RAISERROR (N'Không hợp lệ!',16,1);
+		ROLLBACK TRANSACTION;
 END
 
 -- 52. Trigger kiểm tra tên quốc gia
-CREATE TRIGGER trg_CheckUniqueCountryName
-ON QuocGia
+CREATE TRIGGER TRG_BT5
+
+ON QUOCGIA
+
 AFTER INSERT
+
 AS
+
 BEGIN
-    DECLARE @countryName NVARCHAR(50);
-    SELECT @countryName = TenQuocGia FROM inserted;
-    IF EXISTS (SELECT * FROM QuocGia WHERE TenQuocGia = @countryName)
-    BEGIN
-        RAISERROR('Tên quốc gia đã tồn tại!', 16, 1);
-        ROLLBACK TRANSACTION;
-    END
+	DECLARE @TENQG NVARCHAR;
+	SELECT @TENQG = TENQG FROM INSERTED;
+
+	IF EXISTS (SELECT * FROM QUOCGIA WHERE @TENQG = TENQG)
+	BEGIN
+		RAISERROR('INVALID',16,1);
+		ROLLBACK TRANSACTION;
+	END
 END
 
 -- 53. Trigger kiểm tra tên tỉnh thành
-CREATE TRIGGER trg_CheckUniqueProvinceName
-ON TinhThanh
+CREATE TRIGGER TRG_BT6
+
+ON TINH
+
 AFTER INSERT
+
 AS
-BEGIN
-    DECLARE @provinceName NVARCHAR(50);
-    SELECT @provinceName = TenTinh FROM inserted;
-    IF EXISTS (SELECT * FROM TinhThanh WHERE TenTinh = @provinceName)
-    BEGIN
-        RAISERROR('Tên tỉnh thành đã tồn tại!', 16, 1);
-        ROLLBACK TRANSACTION;
-    END
+
+BEGIN 
+	DECLARE @TENTINH NVARCHAR;
+	SELECT @TENTINH = TENTINH FROM INSERTED;;
+
+	IF EXISTS (SELECT * FROM TINH WHERE
+		@TENTINH = TENTINH)
+	BEGIN
+		RAISERROR ('INVALID',16,1);
+		ROLLBACK TRANSACTION;
+	END
 END
 
 -- 54. Trigger không cho sửa kết quả trận đấu đã diễn ra
-CREATE TRIGGER trg_PreventResultChange
-ON TranDau
-INSTEAD OF UPDATE
-AS
-BEGIN
-    DECLARE @matchDate DATE;
-    SELECT @matchDate = NgayTD FROM inserted;
+CREATE TRIGGER TRG_BT7
 
-    IF @matchDate < GETDATE()
-    BEGIN
-        RAISERROR('Không thể sửa kết quả của trận đấu đã diễn ra!', 16, 1);
-        ROLLBACK TRANSACTION;
-    END
-    ELSE
-    BEGIN
-        UPDATE TranDau SET KETQUA = inserted.KETQUA WHERE MATRAN = inserted.MATRAN;
-    END
+ON TRANDAU
+
+INSTEAD OF UPDATE
+			
+AS
+
+BEGIN 
+	DECLARE @NGAYTD NVARCHAR;
+	SELECT @NGAYTD = NGAYTD FROM INSERTED;
+
+	IF @NGAYTD < GETDATE()
+	BEGIN
+		RAISERROR ('INVALID',16,1);
+		ROLLBACK TRANSACTION;
+	END
+
+	ELSE
+	BEGIN
+		UPDATE TRANDAU
+		SET
+			NGAYTD = INSERTED.NGAYTD,
+			KETQUA = INSERTED.KETQUA
+		FROM TRANDAU JOIN INSERTED
+			ON TRANDAU.MATRAN = INSERTED.MATRAN;
+	
+	END
 END
 
 -- 55. Trigger phân công huấn luyện viên
-CREATE TRIGGER trg_CheckCoachRole
-ON HuanLuyenVien
+CREATE TRIGGER TRG_BT8
+
+ON HLV_CLB
+
 AFTER INSERT
-AS
+
+AS 
+
 BEGIN
-    DECLARE @role NVARCHAR(50);
-    SELECT @role = VaiTro FROM inserted;
-    IF NOT EXISTS (SELECT * FROM (VALUES ('HLV chính'), ('HLV phụ'), ('HLV thể lực'), ('HLV thủ môn')) AS Roles(Role) WHERE Role = @role)
-    BEGIN
-        RAISERROR('Vai trò huấn luyện viên không hợp lệ!', 16, 1);
-        ROLLBACK TRANSACTION;
-    END
+	DECLARE @VAITRO NVARCHAR;
+	SELECT @VAITRO = VAITRO FROM INSERTED;
+	IF NOT EXISTS (SELECT * FROM (VALUES
+		('HLV chính'), ('HLV phụ'), 
+		('HLV thể lực'), ('HLV thủ môn')) 
+		AS VAITRO(VT) WHERE VT = @VAITRO)
+	BEGIN
+		RAISERROR ('INVALID!',16,1);
+		ROLLBACK TRANSACTION;
+	END
 
-    -- Kiểm tra số lượng HLV chính
-    DECLARE @club NVARCHAR(50);
-    SELECT @club = CLB FROM inserted;
-    DECLARE @headCoachCount INT;
-    SELECT @headCoachCount = COUNT(*) FROM HuanLuyenVien WHERE VaiTro = 'HLV chính' AND CLB = @club;
+	DECLARE @MACLB NVARCHAR, @CNT INT;
+	SELECT @MACLB = MACLB FROM INSERTED;
+	SELECT @CNT = COUNT(*) FROM HLV_CLB
+		WHERE VAITRO = N'HLV chính' AND @MACLB = MACLB;
 
-    IF @headCoachCount >= 2
-    BEGIN
-        RAISERROR('Mỗi câu lạc bộ chỉ có tối đa 2 HLV chính!', 16, 1);
-        ROLLBACK TRANSACTION;
-    END
+	IF (@CNT > 2)
+	BEGIN
+		RAISERROR ('INVALID',16,1);
+		ROLLBACK TRANSACTION;
+	END
 END
 
 -- 56. Trigger kiểm tra câu lạc bộ trùng tên
