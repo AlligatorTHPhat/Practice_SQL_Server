@@ -744,31 +744,77 @@ BEGIN
 END
 
 -- 56. Trigger kiểm tra câu lạc bộ trùng tên
-CREATE TRIGGER trg_CheckDuplicateClubName
-ON CLB
+USE QUAN_LY_GIAI_BONG_DA_V_LEAGUE
+GO
+
+CREATE TRIGGER TRG_BT9
+
+ON CAULACBO
+
 AFTER INSERT
+
 AS
+
 BEGIN
-    DECLARE @clubName NVARCHAR(50);
-    SELECT @clubName = TenCLB FROM inserted;
-    IF EXISTS (SELECT * FROM CLB WHERE TenCLB = @clubName)
-    BEGIN
-        PRINT 'Câu lạc bộ đã tồn tại, nhưng vẫn cho phép thêm.';
-    END
+	DECLARE @TENCLB NVARCHAR;
+	SELECT @TENCLB = TENCLB FROM INSERTED;
+
+	IF EXISTS (SELECT * FROM CAULACBO WHERE @TENCLB = TENCLB)
+	BEGIN
+		RAISERROR('INVALID!',16,1);
+		ROLLBACK TRANSACTION;
+	END
 END
 
 -- 57. Trigger sửa tên cầu thủ
-CREATE TRIGGER trg_LogPlayerNameChange
-ON CauThu
+--a
+CREATE TRIGGER TRG_BT10A
+ON CAUTHU
 AFTER UPDATE
 AS
 BEGIN
-    DECLARE @playerId INT;
-    DECLARE @oldName NVARCHAR(50);
-    DECLARE @newName NVARCHAR(50);
-    
-    SELECT @playerId = MaCT, @oldName = deleted.HoTen, @newName = inserted.HoTen FROM inserted INNER JOIN deleted ON inserted.MaCT = deleted.MaCT;
-    
-    PRINT 'Vừa sửa thông tin của cầu thủ có mã số ' + CAST(@playerId AS NVARCHAR);
-    PRINT 'Mã cầu thủ: ' + CAST(@playerId AS NVARCHAR) + ', Tên cũ: ' + @oldName + ', Tên mới: ' + @newName;
-END
+    DECLARE @TENCT NVARCHAR(50), @MACT NVARCHAR(20), @TEMPTEN NVARCHAR(50);
+
+    SELECT @MACT = MACT, @TENCT = HOTEN FROM INSERTED;
+
+    SELECT @TEMPTEN = HOTEN FROM DELETED;
+
+    IF EXISTS (
+        SELECT 1
+        FROM CAUTHU
+        WHERE HOTEN = @TENCT AND MACT = @MACT
+    )
+    BEGIN
+        PRINT(N'Trùng tên với cầu thủ có mã số ' + @MACT)
+    END
+
+END;
+
+--b
+CREATE TRIGGER TRG_BT10B
+ON CAUTHU
+AFTER UPDATE
+AS
+BEGIN
+    DECLARE @TENCT NVARCHAR(50), @MACT NVARCHAR(20), @TEMPTEN NVARCHAR(50);
+
+    SELECT @MACT = MACT, @TENCT = HOTEN FROM INSERTED;
+
+    SELECT @TEMPTEN = HOTEN FROM DELETED;
+
+    IF EXISTS (
+        SELECT 1
+        FROM CAUTHU
+        WHERE HOTEN = @TENCT AND MACT = @MACT
+    )
+    BEGIN
+		RAISERROR (N'Trùng với cầu thủ có mã số %s',16,1,@MACT);
+		ROLLBACK TRANSACTION;
+    END
+
+	ELSE
+	BEGIN
+		PRINT(N'Đã thay đổi tên cầu thủ có mã số ' + @MACT + N', tên mới: ' + @TENCT + N', tên cũ: ' + @TEMPTEN);
+	END
+END;
+
